@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>¿Qué Negocio Toca Hoy?</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: #07071a;
+  color: #fff;
+  font-family: Arial, sans-serif;
+}
+
+/* ===== SIDEBAR ===== */
+#sidebar {
+  width: 260px;
+  min-width: 220px;
+  background: #10102a;
+  border-right: 2px solid #1e1e50;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 12px;
+  gap: 10px;
+  overflow-y: auto;
+}
+#sidebar h2 {
+  font-size: .85rem;
+  color: #ffe600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #1e1e50;
+  padding-bottom: 8px;
+}
+#add-row { display: flex; gap: 6px; }
+#new-item {
+  flex: 1;
+  background: #1a1a3a;
+  border: 1px solid #2a2a55;
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 9px;
+  font-size: .8rem;
+  outline: none;
+}
+#new-item:focus { border-color: #c840ff; }
+#btn-add {
+  background: #c840ff;
+  border: none;
+  color: #fff;
+  font-size: 1.4rem;
+  border-radius: 8px;
+  width: 38px;
+  cursor: pointer;
+}
+#btn-add:hover { background: #9900cc; }
+#list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  overflow-y: auto;
+}
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #1a1a3a;
+  border-radius: 8px;
+  padding: 6px 9px;
+  border-left: 4px solid #ccc;
+}
+.dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.name { flex: 1; font-size: .76rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.del { background: none; border: none; color: #ff4466; font-size: 1rem; cursor: pointer; }
+.del:hover { color: #ff0033; }
+#hint { font-size: .68rem; color: #444; text-align: center; }
+
+/* ===== MAIN ===== */
+#main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: radial-gradient(ellipse at center, #16163a 0%, #07071a 70%);
+  position: relative;
+}
+#title {
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+  text-shadow: 0 0 22px #bf00ff;
+  text-align: center;
+}
+#title span { color: #ffe600; text-shadow: 0 0 18px #ffe60077; }
+
+/* wheel wrapper */
+#wheel-wrap {
+  position: relative;
+  width: 440px;
+  height: 440px;
+}
+/* glow ring */
+#glow-ring {
+  position: absolute;
+  top: -16px; left: -16px; right: -16px; bottom: -16px;
+  border-radius: 50%;
+  border: 5px solid #bf00ff;
+  box-shadow: 0 0 30px #bf00ff, 0 0 60px #bf00ff55;
+  pointer-events: none;
+  z-index: 2;
+}
+canvas {
+  border-radius: 50%;
+  display: block;
+  position: relative;
+  z-index: 1;
+}
+/* hub */
+#hub {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 56px; height: 56px;
+  background: radial-gradient(circle, #2a2a5a, #0d0d22);
+  border-radius: 50%;
+  border: 3px solid #444;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem;
+  z-index: 15;
+  box-shadow: 0 0 16px #000;
+}
+/* pointer */
+#pointer {
+  position: absolute;
+  top: -24px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  filter: drop-shadow(0 0 10px #ff2244);
+}
+
+/* spin button */
+#btn-spin {
+  margin-top: 24px;
+  padding: 14px 52px;
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: 3px;
+  background: linear-gradient(135deg, #bf00ff, #7700cc);
+  border: none;
+  border-radius: 50px;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 0 24px #bf00ff, 0 4px 20px #0009;
+  transition: transform .15s, box-shadow .15s;
+}
+#btn-spin:hover:not(:disabled) { transform: scale(1.06); box-shadow: 0 0 40px #bf00ff; }
+#btn-spin:disabled { background: #444; box-shadow: none; cursor: not-allowed; }
+
+/* LEDs */
+.led {
+  position: absolute;
+  width: 9px; height: 9px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #fff, 0 0 12px #c840ff;
+  z-index: 3;
+  animation: blinkLed 1.8s ease-in-out infinite;
+}
+@keyframes blinkLed { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+/* ===== OVERLAY ===== */
+#overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.88);
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+#overlay.show { display: flex; animation: fadeIn .25s ease; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+#card {
+  background: #12122e;
+  border: 3px solid #c840ff;
+  border-radius: 24px;
+  padding: 40px 56px;
+  text-align: center;
+  box-shadow: 0 0 60px #bf00ff, 0 0 120px #bf00ff33;
+  animation: popUp .5s cubic-bezier(.175,.885,.32,1.5) both;
+  max-width: 460px;
+}
+@keyframes popUp { from{transform:scale(.2) rotate(-8deg);opacity:0} to{transform:scale(1) rotate(0);opacity:1} }
+
+#res-emoji { font-size: 4.5rem; margin-bottom: 10px; display: block; }
+#res-label {
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #ffe600;
+  text-shadow: 0 0 24px #ffe600;
+  margin-bottom: 8px;
+  line-height: 1.15;
+}
+#res-sub { color: #777; font-size: .85rem; margin-bottom: 28px; }
+#btn-close {
+  background: none;
+  border: 2px solid #c840ff;
+  color: #c840ff;
+  padding: 10px 28px;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: .9rem;
+  margin-right: 10px;
+}
+#btn-close:hover { background: #c840ff; color: #fff; }
+#btn-again {
+  background: linear-gradient(135deg,#bf00ff,#7700cc);
+  border: none; color: #fff;
+  padding: 10px 28px;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: .9rem;
+  box-shadow: 0 0 14px #bf00ff;
+}
+#btn-again:hover { transform: scale(1.05); }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <h2>🎯 Secciones</h2>
+  <div id="add-row">
+    <input id="new-item" type="text" placeholder="Nueva sección…" maxlength="30">
+    <button id="btn-add">+</button>
+  </div>
+  <div id="list"></div>
+  <div id="hint">Mínimo 2 secciones para girar</div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="title">¿QUÉ <span>NEGOCIO</span> TOCA HOY?</div>
+
+  <div id="wheel-wrap">
+    <div id="glow-ring"></div>
+    <!-- LEDs se insertan por JS -->
+    <canvas id="canvas" width="440" height="440"></canvas>
+    <div id="hub">🏪</div>
+    <div id="pointer">
+      <svg width="30" height="40" viewBox="0 0 30 40">
+        <polygon points="15,38 0,2 30,2" fill="#ff2244"/>
+        <polygon points="15,38 5,10 25,10" fill="#ff7799" opacity=".5"/>
+      </svg>
+    </div>
+  </div>
+
+  <button id="btn-spin">↻ &nbsp;GIRAR</button>
+</div>
+
+<!-- RESULT OVERLAY -->
+<div id="overlay">
+  <div id="card">
+    <span id="res-emoji">🎯</span>
+    <div id="res-label">RESULTADO</div>
+    <div id="res-sub">¡Esta es tu sección de hoy!</div>
+    <button id="btn-close">Cerrar</button>
+    <button id="btn-again">Girar de nuevo</button>
+  </div>
+</div>
+
+<script>
+// ── DATOS ──────────────────────────────────────────────
+const COLORS = [
+  "#f5a623","#e8394a","#fc5c7d","#bd10e0","#9013fe","#4a90e2",
+  "#0099cc","#00c9a7","#7ed321","#417505","#f8e71c","#f7971e",
+  "#43e97b","#fa709a","#fee140","#a18cd1","#84fab0","#f093fb","#ff6b6b","#0652DD"
+];
+const EMOJIS = ["🏋️","🍔","👗","💄","📷","🚗","🦷","🐾","🏠","💻","💼","🏗️","📱","🌿","🎨","🎵","💰","🎯","🔥","✨"];
+
+let segments = [
+  {label:"GIMNASIO Y FITNESS",       color:"#f5a623", emoji:"🏋️"},
+  {label:"RESTAURANTE Y COMIDA",     color:"#e8394a", emoji:"🍔"},
+  {label:"TIENDA ONLINE DE ROPA",    color:"#fc5c7d", emoji:"👗"},
+  {label:"SALÓN DE BELLEZA",         color:"#bd10e0", emoji:"💄"},
+  {label:"FOTOGRAFÍA",               color:"#9013fe", emoji:"📷"},
+  {label:"AUTOS / DETALLADO",        color:"#4a90e2", emoji:"🚗"},
+  {label:"CLÍNICA DENTAL",           color:"#0099cc", emoji:"🦷"},
+  {label:"VETERINARIA",              color:"#00c9a7", emoji:"🐾"},
+  {label:"BIENES RAÍCES",            color:"#7ed321", emoji:"🏠"},
+  {label:"SERVICIOS DIGITALES",      color:"#417505", emoji:"💻"},
+  {label:"ASESORÍA Y CONSULTORÍA",   color:"#f8e71c", emoji:"💼"},
+  {label:"CONSTRUCCIÓN Y REMODELACIONES", color:"#f7971e", emoji:"🏗️"},
+];
+
+// ── ELEMENTOS ──────────────────────────────────────────
+const canvas   = document.getElementById("canvas");
+const ctx      = canvas.getContext("2d");
+const overlay  = document.getElementById("overlay");
+const listEl   = document.getElementById("list");
+const inputEl  = document.getElementById("new-item");
+const wrapEl   = document.getElementById("wheel-wrap");
+
+let angle    = 0;
+let spinning = false;
+
+// ── LEDs ───────────────────────────────────────────────
+(function buildLEDs(){
+  const SZ = 440, count = 28, R = SZ/2 + 12;
+  for(let i=0;i<count;i++){
+    const a = (i/count)*Math.PI*2 - Math.PI/2;
+    const led = document.createElement("div");
+    led.className = "led";
+    led.style.left = (SZ/2 + R*Math.cos(a) - 4.5) + "px";
+    led.style.top  = (SZ/2 + R*Math.sin(a) - 4.5) + "px";
+    led.style.animationDelay = (i*0.065) + "s";
+    wrapEl.appendChild(led);
+  }
+})();
+
+// ── DIBUJAR RULETA ─────────────────────────────────────
+function wrapText(text, maxW){
+  const words = text.split(" ");
+  const lines = [];
+  let cur = "";
+  for(const w of words){
+    const test = cur ? cur+" "+w : w;
+    if(ctx.measureText(test).width > maxW && cur){ lines.push(cur); cur=w; }
+    else cur = test;
+  }
+  if(cur) lines.push(cur);
+  return lines;
+}
+
+function draw(){
+  const W = canvas.width;
+  const cx=W/2, cy=W/2, r=W/2-3;
+  ctx.clearRect(0,0,W,W);
+
+  if(!segments.length){
+    ctx.fillStyle="#1a1a3a";
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#555"; ctx.font=`bold 22px Arial`;
+    ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillText("Añade secciones",cx,cy);
+    return;
+  }
+
+  const n   = segments.length;
+  const arc = (Math.PI*2)/n;
+
+  for(let i=0;i<n;i++){
+    const s = angle + i*arc;
+    const e = s + arc;
+    const seg = segments[i];
+
+    // sector
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,s,e);
+    ctx.closePath();
+    ctx.fillStyle = seg.color;
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // brillo
+    const g = ctx.createRadialGradient(cx,cy,r*.08,cx,cy,r);
+    g.addColorStop(0,"rgba(255,255,255,0.22)");
+    g.addColorStop(1,"rgba(0,0,0,0.07)");
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,s,e);
+    ctx.closePath();
+    ctx.fillStyle=g; ctx.fill();
+
+    // texto
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(s + arc/2);
+    const fs   = Math.max(8, Math.min(13, W*0.024));
+    const tr   = r*0.85;
+    const maxW = tr*0.56;
+    ctx.font = `900 ${fs}px Arial`;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "rgba(0,0,0,0.82)";
+    const lines = wrapText(seg.label, maxW);
+    const lh = fs*1.25;
+    const th = lines.length*lh;
+    lines.forEach((ln,li)=>{ ctx.fillText(ln, tr, -th/2+li*lh+lh/2); });
+
+    // emoji
+    ctx.font = `${fs*1.8}px serif`;
+    ctx.textAlign = "center";
+    ctx.fillText(seg.emoji, r*0.38, 0);
+    ctx.restore();
+  }
+
+  // borde
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.strokeStyle="rgba(255,255,255,0.15)"; ctx.lineWidth=3; ctx.stroke();
+}
+
+// ── GIRAR ──────────────────────────────────────────────
+function spin(){
+  if(spinning || segments.length<2) return;
+  spinning = true;
+  document.getElementById("btn-spin").disabled = true;
+  document.getElementById("btn-spin").textContent = "GIRANDO…";
+
+  const turns  = 7 + Math.random()*5;
+  const extra  = Math.random()*Math.PI*2;
+  const target = angle + turns*Math.PI*2 + extra;
+  const dur    = 4000 + Math.random()*2000;
+  const a0     = angle;
+  const t0     = performance.now();
+  const snap   = segments.slice(); // copia para usar en el frame
+
+  function ease(t){ return 1-Math.pow(1-t,4); }
+
+  function frame(now){
+    const t = Math.min((now-t0)/dur, 1);
+    angle = a0 + (target-a0)*ease(t);
+    draw();
+    if(t<1){ requestAnimationFrame(frame); }
+    else{
+      angle = angle % (Math.PI*2);
+      spinning = false;
+      const btn = document.getElementById("btn-spin");
+      btn.disabled = false;
+      btn.textContent = "↻  GIRAR";
+      showResult(snap, angle);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+// ── RESULTADO ──────────────────────────────────────────
+function showResult(segs, ang){
+  const n   = segs.length;
+  const arc = (Math.PI*2)/n;
+  const norm = ((ang%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
+  const ptr  = (Math.PI*2 - norm + Math.PI*1.5)%(Math.PI*2);
+  const idx  = Math.floor(ptr/arc)%n;
+  const w    = segs[idx];
+
+  document.getElementById("res-emoji").textContent = w.emoji;
+  document.getElementById("res-label").textContent = w.label;
+
+  // re-animar la card
+  const card = document.getElementById("card");
+  card.style.animation = "none";
+  card.offsetHeight; // reflow
+  card.style.animation = "popUp .5s cubic-bezier(.175,.885,.32,1.5) both";
+
+  overlay.classList.add("show");
+}
+
+// ── LISTA SIDEBAR ──────────────────────────────────────
+function renderList(){
+  listEl.innerHTML = "";
+  if(!segments.length){
+    listEl.innerHTML = `<div style="color:#555;font-size:.75rem;text-align:center;padding-top:8px">Sin secciones. ¡Añade una!</div>`;
+    return;
+  }
+  segments.forEach((s,i)=>{
+    const row = document.createElement("div");
+    row.className = "item-row";
+    row.style.borderLeftColor = s.color;
+    row.innerHTML = `
+      <div class="dot" style="background:${s.color}"></div>
+      <div class="name">${s.emoji} ${s.label}</div>
+      <button class="del" data-i="${i}">✕</button>`;
+    listEl.appendChild(row);
+  });
+  listEl.querySelectorAll(".del").forEach(b=>{
+    b.addEventListener("click",()=>{
+      segments.splice(+b.dataset.i,1);
+      renderList(); draw();
+    });
+  });
+}
+
+function addSeg(){
+  const v = inputEl.value.trim().toUpperCase();
+  if(!v) return;
+  const idx = segments.length % COLORS.length;
+  segments.push({label:v, color:COLORS[idx], emoji:EMOJIS[idx]});
+  inputEl.value = "";
+  renderList(); draw();
+}
+
+// ── EVENTOS ────────────────────────────────────────────
+document.getElementById("btn-spin").addEventListener("click", spin);
+document.getElementById("btn-add").addEventListener("click", addSeg);
+inputEl.addEventListener("keydown", e=>{ if(e.key==="Enter") addSeg(); });
+
+document.getElementById("btn-close").addEventListener("click",()=> overlay.classList.remove("show"));
+document.getElementById("btn-again").addEventListener("click",()=>{
+  overlay.classList.remove("show");
+  setTimeout(spin, 350);
+});
+overlay.addEventListener("click", e=>{ if(e.target===overlay) overlay.classList.remove("show"); });
+
+// ── INICIO ─────────────────────────────────────────────
+renderList();
+draw();
+</script>
+</body>
+</html>
